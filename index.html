@@ -14,7 +14,6 @@
             margin: 0;
             padding: 0;
             width: 100vw;
-            /* Высота страницы в 3 раза больше экрана, чтобы не было рамок */
             height: 300vh; 
             background-color: #f2f2f2;
             overflow: hidden;
@@ -23,16 +22,14 @@
             left: 0;
         }
 
-        /* КАРТА: Огромный слой, заходящий за края */
+        /* КАРТА: Огромный слой */
         #map {
             position: absolute;
-            width: 110vw; /* Чуть шире */
-            height: 300vh; /* Такая же огромная высота */
-            top: -100vh;   /* Центрируем среднюю часть на экране */
+            width: 110vw; 
+            height: 300vh; 
+            top: -100vh;   
             left: -5vw;
             z-index: 1;
-            
-            /* Аппаратное ускорение */
             transform: translate3d(0,0,0);
             -webkit-transform: translate3d(0,0,0);
         }
@@ -42,43 +39,49 @@
             filter: grayscale(1) contrast(1.1) brightness(1.03);
         }
 
-        /* Стеклянная плашка в верхней части видимой зоны */
+        /* УЛУЧШЕННАЯ СТЕКЛЯННАЯ ПЛАШКА */
         .weather-panel {
-            position: fixed; /* Фиксируем относительно ГЛАЗА пользователя */
+            position: fixed; 
             top: env(safe-area-inset-top, 44px);
             left: 20px;
             z-index: 9999;
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            padding: 10px 16px;
-            border-radius: 12px;
-            border: 0.5px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            /* Увеличил плотность белого для стабильности цвета */
+            background: rgba(255, 255, 255, 0.82); 
+            /* Системное размытие iOS */
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            padding: 12px 16px;
+            border-radius: 14px;
+            /* Тонкая светлая граница для объема */
+            border: 0.5px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
             pointer-events: none;
+            /* Оптимизация отрисовки */
+            will-change: backdrop-filter;
         }
 
         .status-row { 
             display: flex; align-items: center; 
-            margin-bottom: 4px; font-weight: 800; 
+            margin-bottom: 5px; font-weight: 800; 
             font-size: 11px; color: #000;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .indicator { 
-            width: 10px; height: 10px; margin-right: 8px; 
-            border-radius: 2px;
+            width: 10px; height: 10px; margin-right: 10px; 
+            border-radius: 50%; /* Сделал круглыми для эстетики */
         }
         
-        .c-red { background: rgba(255, 59, 48, 0.7); } 
-        .c-green { background: rgba(52, 199, 89, 0.7); }
+        .c-red { background: #ff3b30; box-shadow: 0 0 8px rgba(255, 59, 48, 0.4); } 
+        .c-green { background: #34c759; box-shadow: 0 0 8px rgba(52, 199, 89, 0.4); }
         
         #update-time { 
-            font-size: 8px; color: rgba(0,0,0,0.5); 
-            font-family: monospace;
+            font-size: 8px; color: rgba(0,0,0,0.4); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
+            font-weight: 600;
         }
 
-        /* Прячем всё системное */
         .leaflet-control-zoom, .leaflet-control-attribution, .leaflet-top.leaflet-left { 
             display: none !important; 
         }
@@ -91,7 +94,7 @@
 <div class="weather-panel">
     <div class="status-row"><div class="indicator c-red"></div> ОСАДКИ</div>
     <div class="status-row"><div class="indicator c-green"></div> ЯСНО</div>
-    <span id="update-time">ЗАГРУЗКА...</span>
+    <span id="update-time">ОБНОВЛЕНИЕ...</span>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -99,7 +102,6 @@
 <script>
     const SPREADSHEET_ID = '19vZJiUgwizqrwbxrZTG5jSe1Czh7af6ApsL2VLQYSwo';
     
-    // Инициализация
     const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false,
