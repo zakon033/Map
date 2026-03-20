@@ -11,62 +11,70 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
-        /* Убираем прокрутку и фиксируем фон */
         html, body {
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: #f4f1ed;
+            background-color: #f2f2f2; 
             position: fixed;
+            touch-action: none; /* Запрет системных жестов браузера */
         }
 
-        /* КАРТА БОЛЬШЕ ЭКРАНА: 120% высоты с вылетом вверх на 10% */
+        /* КАРТА В 3 РАЗА БОЛЬШЕ ЭКРАНА (300% высоты и 120% ширины для запаса) */
         #map {
-            width: 100%;
-            height: 120vh; 
+            width: 120%;
+            height: 300vh; 
             position: absolute;
-            top: -10vh; 
-            left: 0;
+            /* Сдвигаем на 10% влево и на 100% вверх, чтобы центр был в зоне видимости */
+            top: -100vh; 
+            left: -10%;
             z-index: 1;
+            
+            /* Аппаратное ускорение (GPU) для плавности */
+            transform: translate3d(0,0,0);
+            -webkit-transform: translate3d(0,0,0);
+            backface-visibility: hidden;
+            perspective: 1000px;
         }
 
-        /* Стиль карты */
+        /* Стиль Toner Lite */
         .leaflet-tile-pane {
-            filter: grayscale(1) contrast(1.2) brightness(1.05);
+            filter: grayscale(1) contrast(1.1) brightness(1.03);
         }
 
-        /* Панель индикаторов */
+        /* Плашка управления (iOS стиль) */
         .weather-panel {
-            position: absolute;
-            top: env(safe-area-inset-top, 30px);
-            left: 15px;
+            position: fixed;
+            top: env(safe-area-inset-top, 40px);
+            left: 20px;
             z-index: 1000;
             background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            padding: 10px 15px;
-            border-radius: 12px;
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 12px 18px;
+            border-radius: 14px;
             border: 0.5px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
             pointer-events: none;
         }
 
         .status-row { 
             display: flex; align-items: center; 
-            margin-bottom: 4px; font-weight: 700; 
-            font-size: 11px; color: #000;
+            margin-bottom: 5px; font-weight: 800; 
+            font-size: 12px; color: #000;
             text-transform: uppercase;
         }
         
         .indicator { 
-            width: 12px; height: 12px; margin-right: 8px; 
+            width: 12px; height: 12px; margin-right: 10px; 
             border-radius: 3px;
         }
         
-        .c-red { background: rgba(255, 59, 48, 0.6); } 
-        .c-green { background: rgba(52, 199, 89, 0.6); }
+        .c-red { background: rgba(255, 59, 48, 0.7); } 
+        .c-green { background: rgba(52, 199, 89, 0.7); }
         
         #update-time { 
-            font-size: 8px; color: rgba(0,0,0,0.5); 
+            font-size: 9px; color: rgba(0,0,0,0.5); 
             font-family: monospace;
         }
 
@@ -80,7 +88,7 @@
 <div class="weather-panel">
     <div class="status-row"><div class="indicator c-red"></div> ОСАДКИ</div>
     <div class="status-row"><div class="indicator c-green"></div> ЯСНО</div>
-    <span id="update-time">ОБНОВЛЕНИЕ...</span>
+    <span id="update-time">ЗАГРУЗКА...</span>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -88,9 +96,13 @@
 <script>
     const SPREADSHEET_ID = '19vZJiUgwizqrwbxrZTG5jSe1Czh7af6ApsL2VLQYSwo';
     
+    // Инициализация
     const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false,
+        zoomAnimation: true,
+        markerZoomAnimation: true,
+        inertia: true,
         tap: true 
     }).setView([50.4501, 30.5234], 11);
 
@@ -117,7 +129,7 @@
                     if (!isNaN(lat) && !isNaN(lng)) {
                         const color = status === 'red' ? '#ff3b30' : '#34c759';
                         L.circleMarker([lat, lng], {
-                            radius: 18,
+                            radius: 22, 
                             fillColor: color,
                             fillOpacity: 0.45,
                             color: color,
@@ -127,9 +139,9 @@
                     }
                 }
             });
-            document.getElementById('update-time').innerText = "UPD: " + new Date().toLocaleTimeString();
+            document.getElementById('update-time').innerText = "ОБНОВЛЕНО: " + new Date().toLocaleTimeString();
         } catch (e) {
-            document.getElementById('update-time').innerText = "ERROR";
+            document.getElementById('update-time').innerText = "ОШИБКА ДАННЫХ";
         }
     }
 
