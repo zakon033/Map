@@ -2,7 +2,6 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <!-- viewport-fit=cover растягивает контент под челку и системные элементы -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10,83 +9,79 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Обнуление всех отступов и запрет прокрутки */
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
+        /* Полный сброс всех отступов браузера */
         html, body {
-            width: 100%;
-            height: 100%;
             margin: 0;
             padding: 0;
-            background-color: #f2f2f2;
+            width: 100%;
+            /* Используем dvh для динамического подбора высоты без полос */
+            height: 100dvh; 
+            background-color: #000;
             overflow: hidden;
-            position: fixed; /* Предотвращает "резиновый" скролл на iOS */
+            position: fixed;
         }
 
         #map {
             position: absolute;
             top: 0;
-            bottom: 0;
             left: 0;
-            right: 0;
             width: 100%;
-            height: 100%;
+            height: 100dvh;
             z-index: 1;
         }
 
-        /* ЧБ фильтр для карты */
+        /* Убираем любые серые фоны под картой */
+        .leaflet-container {
+            background: #000 !important;
+        }
+
         .leaflet-tile-pane {
             filter: grayscale(1) contrast(1.1);
         }
 
-        /* Панель управления с учетом безопасных зон (Safe Areas) */
+        /* Компактная панель */
         .weather-panel {
             position: fixed; 
-            top: calc(env(safe-area-inset-top, 0px) + 15px);
-            left: calc(env(safe-area-inset-left, 0px) + 15px);
+            top: env(safe-area-inset-top, 10px);
+            left: env(safe-area-inset-left, 10px);
             z-index: 9999;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px 14px;
-            border-radius: 8px;
-            border: 1.5px solid #000000;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #000;
             pointer-events: none;
-            backdrop-filter: blur(4px); /* Легкое размытие под панелью */
+            backdrop-filter: blur(5px);
+            font-family: -apple-system, system-ui, sans-serif;
         }
 
         .status-row { 
             display: flex; 
             align-items: center; 
-            margin-bottom: 4px; 
-            font-weight: 900; 
-            font-size: 11px; 
+            margin-bottom: 2px; 
+            font-weight: 800; 
+            font-size: 10px; 
             color: #000;
             text-transform: uppercase;
         }
         
         .indicator { 
-            width: 12px; 
-            height: 12px; 
-            margin-right: 8px; 
+            width: 10px; 
+            height: 10px; 
+            margin-right: 6px; 
             border: 1px solid #000;
         }
         
-        .c-red { background: #ff0000; box-shadow: 0 0 5px rgba(255,0,0,0.5); } 
-        .c-green { background: #00ff00; box-shadow: 0 0 5px rgba(0,255,0,0.5); }
+        .c-red { background: #ff0000; } 
+        .c-green { background: #00ff00; }
         
         #update-time { 
-            font-size: 9px; 
-            color: #444; 
+            font-size: 8px; 
+            color: #333; 
             font-family: monospace;
-            font-weight: bold;
         }
 
-        /* Полное скрытие всех стандартных кнопок и логотипов карты */
-        .leaflet-control-container .leaflet-top,
-        .leaflet-control-container .leaflet-bottom,
-        .leaflet-control-zoom, 
-        .leaflet-control-attribution { 
-            display: none !important; 
-        }
+        /* Скрываем всё лишнее программно */
+        .leaflet-control-container { display: none !important; }
     </style>
 </head>
 <body>
@@ -96,7 +91,7 @@
 <div class="weather-panel">
     <div class="status-row"><div class="indicator c-red"></div> ОСАДКИ</div>
     <div class="status-row"><div class="indicator c-green"></div> ЯСНО</div>
-    <span id="update-time">СИНХРОНИЗАЦИЯ...</span>
+    <span id="update-time">SYNC...</span>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -104,10 +99,13 @@
 <script>
     const SPREADSHEET_ID = '19vZJiUgwizqrwbxrZTG5jSe1Czh7af6ApsL2VLQYSwo';
     
+    // Инициализация карты
     const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false,
-        renderer: L.canvas()
+        renderer: L.canvas(),
+        // Убираем инерцию и лишние зазоры при перетаскивании
+        bounceAtZoomLimits: false
     }).setView([50.4501, 30.5234], 11);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -116,13 +114,11 @@
 
     function drawLaser(ctx, point, radius, color) {
         const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
-        
         gradient.addColorStop(0, color);
-        gradient.addColorStop(0.05, color);
-        gradient.addColorStop(0.15, hexToRgba(color, 0.6));
-        gradient.addColorStop(0.3, hexToRgba(color, 0.2));
-        gradient.addColorStop(0.6, hexToRgba(color, 0.05));
-        gradient.addColorStop(1, hexToRgba(color, 0));
+        gradient.addColorStop(0.1, color);
+        gradient.addColorStop(0.3, hexToRgba(color, 0.4));
+        gradient.addColorStop(0.6, hexToRgba(color, 0.1));
+        gradient.addColorStop(1, "transparent");
 
         ctx.beginPath();
         ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
@@ -166,27 +162,27 @@
                         circle._updatePath = function() {
                             const renderer = this._renderer;
                             const ctx = renderer._ctx;
-                            const p = this._point;
-                            const r = this._radius;
-
-                            if (!p || !r) return;
-                            drawLaser(ctx, p, r, laserColor);
+                            if (ctx && this._point) {
+                                drawLaser(ctx, this._point, this._radius, laserColor);
+                            }
                         };
                     }
                 }
             });
-            document.getElementById('update-time').innerText = "UPD: " + new Date().toLocaleTimeString();
+            document.getElementById('update-time').innerText = "LAST UPDATE: " + new Date().toLocaleTimeString();
         } catch (e) {
-            console.error(e);
-            document.getElementById('update-time').innerText = "DATA ERROR";
+            document.getElementById('update-time').innerText = "OFFLINE";
         }
     }
 
     updateWeather();
     setInterval(updateWeather, 30000);
 
-    // Принудительное обновление размера карты при изменении ориентации экрана
-    window.addEventListener('resize', () => map.invalidateSize());
+    // Исправление бага "серых полос" при ресайзе
+    window.addEventListener('resize', () => {
+        document.body.style.height = window.innerHeight + 'px';
+        map.invalidateSize();
+    });
 </script>
 
 </body>
