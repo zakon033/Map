@@ -2,77 +2,76 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <!-- Мета-теги для полного экрана без полос -->
+    <!-- viewport-fit=cover критически важен, чтобы карта заходила за границы полосок -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="mobile-web-app-capable" content="yes">
-    
     <title>Киев Погода LIVE</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        /* Убираем все отступы и фиксируем высоту */
         body, html { 
-            margin: 0; padding: 0; height: 100%; 
-            font-family: -apple-system, system-ui, BlinkMacSystemFont, sans-serif; 
-            background: #ffffff; overflow: hidden; 
+            margin: 0; padding: 0; 
+            height: 100%; width: 100%;
+            background: #000; /* Черный фон уберет контраст с полосой */
+            overflow: hidden; 
+            position: fixed; /* Предотвращает дергание при скролле */
         }
 
-        /* Карта на весь экран */
+        /* Карта на всю высоту, включая системные области */
         #map { 
             height: 100vh; 
-            width: 100vw; 
+            height: 100dvh; /* Динамическая высота для мобилок */
+            width: 100%; 
             position: absolute;
             top: 0;
             left: 0;
         }
 
-        /* Эмуляция Toner Lite */
+        /* Фильтр для стиля Toner Lite */
         .leaflet-tile-pane {
             filter: grayscale(1) contrast(1.2) brightness(1.05);
         }
 
-        /* Стеклянная панель в стиле iOS */
+        /* Панель в стиле iOS */
         .weather-panel {
             position: absolute;
             top: env(safe-area-inset-top, 20px);
             left: 15px;
             z-index: 1000;
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            padding: 12px 18px;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 12px 16px;
             border-radius: 12px;
             border: 0.5px solid rgba(0, 0, 0, 0.1);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             pointer-events: none;
         }
 
         .status-row { 
             display: flex; align-items: center; 
-            margin-bottom: 6px; font-weight: 700; 
-            font-size: 13px; color: #000;
+            margin-bottom: 5px; font-weight: 700; 
+            font-size: 12px; color: #000;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
         }
         
         .indicator { 
-            width: 14px; height: 14px; margin-right: 10px; 
-            border-radius: 3px;
+            width: 12px; height: 12px; margin-right: 10px; 
+            border-radius: 50%; /* Круглые индикаторы в меню */
         }
         
-        .c-red { background: rgba(255, 59, 48, 0.6); } /* Apple Red */
-        .c-green { background: rgba(52, 199, 89, 0.6); } /* Apple Green */
+        .c-red { background: rgba(255, 59, 48, 0.7); } 
+        .c-green { background: rgba(52, 199, 89, 0.7); }
         
         #update-time { 
-            font-size: 9px; color: rgba(0,0,0,0.5); display: block; 
-            font-family: Menlo, monospace; font-weight: 600; 
-            margin-top: 4px;
+            font-size: 9px; color: rgba(0,0,0,0.6); display: block; 
+            font-family: -apple-system, monospace;
         }
 
-        /* Убираем мусор с карты */
+        /* Убираем лишние элементы */
         .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
-        .leaflet-marker-pane { filter: none !important; }
     </style>
 </head>
 <body>
@@ -90,12 +89,11 @@
 <script>
     const SPREADSHEET_ID = '19vZJiUgwizqrwbxrZTG5jSe1Czh7af6ApsL2VLQYSwo';
     
-    // Инициализация
     const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false,
         tap: true 
-    }).setView([50.4501, 30.5234], 10);
+    }).setView([50.4501, 30.5234], 11);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -122,7 +120,7 @@
                         L.circleMarker([lat, lng], {
                             radius: 18,
                             fillColor: color,
-                            fillOpacity: 0.45,
+                            fillOpacity: 0.5,
                             color: color,
                             weight: 1.5,
                             opacity: 0.7
@@ -130,9 +128,9 @@
                     }
                 }
             });
-            document.getElementById('update-time').innerText = "UPDATED: " + new Date().toLocaleTimeString();
+            document.getElementById('update-time').innerText = "ОБНОВЛЕНО: " + new Date().toLocaleTimeString();
         } catch (e) {
-            document.getElementById('update-time').innerText = "DATA ERROR";
+            document.getElementById('update-time').innerText = "ОШИБКА ДАННЫХ";
         }
     }
 
