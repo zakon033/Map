@@ -9,10 +9,10 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Блокируем любые отступы и системные жесты */
+        /* СБРОС СТИЛЕЙ И БЛОКИРОВКА СИСТЕМНЫХ ОТСТУПОВ */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        /* Метод 300vh: создаем сверхвысокий контейнер, чтобы "утопить" карту в безопасной зоне */
+        /* КРИТИЧЕСКИЙ БЛОК: Метод 300vh для борьбы с барами браузера */
         html, body {
             margin: 0; padding: 0; 
             width: 100vw; 
@@ -25,7 +25,7 @@
             overscroll-behavior: none;
         }
 
-        /* Карта занимает все 300vh, но мы показываем только среднюю часть (через top: -100vh) */
+        /* КАРТА: Центрирование в безопасной зоне */
         #map { 
             position: absolute; 
             width: 100vw; 
@@ -33,26 +33,13 @@
             top: -100vh; 
             left: 0; 
             z-index: 1; 
+            background: #fff;
         }
 
-        /* Черно-белый стиль */
+        /* СТИЛИЗАЦИЯ КАРТЫ (ЧЕРНО-БЕЛЫЙ) */
         .leaflet-tile-pane { filter: grayscale(1) contrast(1.1); }
 
-        /* Кастомный попап */
-        .leaflet-popup-content-wrapper {
-            background: #fff; color: #000; border-radius: 4px; border: 2px solid #000;
-            max-height: 250px; overflow-y: auto; box-shadow: none;
-        }
-        .leaflet-popup-content { margin: 12px; width: 240px !important; }
-        
-        .msg-item { padding: 8px 0; border-bottom: 1px solid #eee; }
-        .msg-item:last-child { border-bottom: none; }
-        .msg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-        .msg-time { font-size: 10px; color: #888; font-weight: bold; font-family: monospace; }
-        .msg-status-dot { width: 10px; height: 10px; border: 1.5px solid #000; }
-        .msg-body { font-size: 13px; font-weight: 700; line-height: 1.3; color: #000; }
-
-        /* Верхняя панель */
+        /* ИНФОРМАЦИОННАЯ ПАНЕЛЬ */
         .weather-panel {
             position: fixed; 
             top: env(safe-area-inset-top, 40px); 
@@ -69,8 +56,21 @@
         .c-red { background: #ff4d00; } 
         .c-green { background: #00ff41; }
         #update-time { font-size: 10px; color: #666; font-family: monospace; font-weight: bold; }
-        
-        /* Скрываем всё лишнее */
+
+        /* ПОПАП СООБЩЕНИЙ */
+        .leaflet-popup-content-wrapper {
+            background: #fff; color: #000; border-radius: 4px; border: 2px solid #000;
+            max-height: 250px; overflow-y: auto; box-shadow: none;
+        }
+        .leaflet-popup-content { margin: 12px; width: 240px !important; }
+        .msg-item { padding: 8px 0; border-bottom: 1px solid #eee; }
+        .msg-item:last-child { border-bottom: none; }
+        .msg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+        .msg-time { font-size: 10px; color: #888; font-weight: bold; font-family: monospace; }
+        .msg-status-dot { width: 10px; height: 10px; border: 1.5px solid #000; }
+        .msg-body { font-size: 13px; font-weight: 700; line-height: 1.3; color: #000; }
+
+        /* СКРЫТИЕ КОНТРОЛЛОВ */
         .leaflet-control-zoom, .leaflet-control-attribution, .leaflet-top.leaflet-left { display: none !important; }
     </style>
 </head>
@@ -87,17 +87,18 @@
     const SPREADSHEET_ID = '19vZJiUgwizqrwbxrZTG5jSe1Czh7af6ApsL2VLQYSwo';
     let allWeatherPoints = [];
     
-    // Инициализация с Canvas
+    // Инициализация карты с использованием Canvas рендерера для лазеров
     const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false, 
         renderer: L.canvas(),
-        tap: false // Отключаем Leaflet tap для лучшей работы на мобильных
+        tap: false 
     }).setView([50.4501, 30.5234], 11);
     
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     const weatherGroup = L.layerGroup().addTo(map);
 
+    // Функция отрисовки "лазерной" точки
     function drawLaser(ctx, p, r, color) {
         const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
         g.addColorStop(0, color); 
@@ -109,6 +110,7 @@
         ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2); ctx.fillStyle = g; ctx.fill();
     }
 
+    // Загрузка данных
     async function update() {
         try {
             const res = await fetch(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=0&v=${Date.now()}`, {cache:"no-store"});
@@ -141,6 +143,7 @@
         } catch(e) { document.getElementById('update-time').innerText = "ОШИБКА"; }
     }
 
+    // Логика группировки клика (500м)
     map.on('click', e => {
         const nearby = allWeatherPoints.filter(p => map.distance(e.latlng, L.latLng(p.lat, p.lng)) <= 500).reverse();
         if (nearby.length > 0) {
