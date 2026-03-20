@@ -9,47 +9,56 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Убираем любые ограничения бокса */
+        /* Полный сброс */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* Делаем html и body "прозрачными" для контента */
         html, body {
-            margin: 0;
-            padding: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden;
             background-color: #f2f2f2;
+            overflow: hidden;
             position: fixed;
-            -webkit-tap-highlight-color: transparent;
+            -webkit-overflow-scrolling: touch;
         }
 
-        /* КАРТА КАК СВОБОДНЫЙ ХОЛСТ (300% ВЫСОТЫ) */
-        #map {
+        /* ГИГАНТСКИЙ АКТИВНЫЙ БОКС */
+        /* Он больше экрана, чтобы перекрыть все системные зоны */
+        .master-container {
             position: absolute;
-            width: 150vw; /* Шире экрана на 50% */
-            height: 300vh; /* В 3 раза выше экрана */
-            
-            /* Центрируем этот гигантский холст относительно окна */
-            top: -100vh; 
-            left: -25vw;
-            
+            top: -150px;    /* Вылет вверх */
+            left: -50px;    /* Вылет влево */
+            right: -50px;   /* Вылет вправо */
+            bottom: -150px; /* Вылет вниз */
+            display: block;
             z-index: 1;
-            
-            /* Аппаратный рендеринг без привязки к потоку документа */
-            transform: translate3d(0,0,0);
-            -webkit-transform: translate3d(0,0,0);
+            overflow: hidden;
+            /* Это делает бокс "активным" для системы */
+            pointer-events: auto; 
         }
 
-        /* Фильтр для эффекта Toner Lite */
+        /* КАРТА ВНУТРИ БОКСА */
+        #map {
+            width: 100%;
+            height: 100%;
+            background: #f2f2f2;
+            /* Ускорение GPU */
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+        }
+
+        /* Эффект Toner Lite */
         .leaflet-tile-pane {
             filter: grayscale(1) contrast(1.1) brightness(1.03);
         }
 
-        /* Плашка - фиксируем её поверх всего */
+        /* Стеклянная плашка (фиксируем относительно окна) */
         .weather-panel {
             position: fixed;
             top: env(safe-area-inset-top, 44px);
             left: 20px;
             z-index: 9999;
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.75);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             padding: 10px 16px;
@@ -79,7 +88,7 @@
             font-family: monospace;
         }
 
-        /* Скрываем всё сервисное */
+        /* Убираем всё лишнее */
         .leaflet-control-zoom, .leaflet-control-attribution, .leaflet-top.leaflet-left { 
             display: none !important; 
         }
@@ -87,7 +96,9 @@
 </head>
 <body>
 
-<div id="map"></div>
+<div class="master-container">
+    <div id="map"></div>
+</div>
 
 <div class="weather-panel">
     <div class="status-row"><div class="indicator c-red"></div> ОСАДКИ</div>
@@ -100,7 +111,7 @@
 <script>
     const SPREADSHEET_ID = '19vZJiUgwizqrwbxrZTG5jSe1Czh7af6ApsL2VLQYSwo';
     
-    // Инициализация гигантского холста
+    // Инициализация карты в нашем гигантском боксе
     const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false,
