@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <!-- viewport-fit=cover растягивает контент под челку и системные элементы -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Киев Погода LIVE - Laser Mode</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* Обнуление всех отступов и запрет прокрутки */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+            overflow: hidden;
+            position: fixed; /* Предотвращает "резиновый" скролл на iOS */
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* ЧБ фильтр для карты */
+        .leaflet-tile-pane {
+            filter: grayscale(1) contrast(1.1);
+        }
+
+        /* Панель управления с учетом безопасных зон (Safe Areas) */
+        .weather-panel {
+            position: fixed; 
+            top: calc(env(safe-area-inset-top, 0px) + 15px);
+            left: calc(env(safe-area-inset-left, 0px) + 15px);
+            z-index: 9999;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1.5px solid #000000;
+            pointer-events: none;
+            backdrop-filter: blur(4px); /* Легкое размытие под панелью */
+        }
+
+        .status-row { 
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 4px; 
+            font-weight: 900; 
+            font-size: 11px; 
+            color: #000;
+            text-transform: uppercase;
+        }
+        
+        .indicator { 
+            width: 12px; 
+            height: 12px; 
+            margin-right: 8px; 
+            border: 1px solid #000;
+        }
+        
+        .c-red { background: #ff0000; box-shadow: 0 0 5px rgba(255,0,0,0.5); } 
+        .c-green { background: #00ff00; box-shadow: 0 0 5px rgba(0,255,0,0.5); }
+        
+        #update-time { 
+            font-size: 9px; 
+            color: #444; 
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        /* Полное скрытие всех стандартных кнопок и логотипов карты */
+        .leaflet-control-container .leaflet-top,
+        .leaflet-control-container .leaflet-bottom,
+        .leaflet-control-zoom, 
+        .leaflet-control-attribution { 
+            display: none !important; 
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="weather-panel">
+    <div class="status-row"><div class="indicator c-red"></div> ОСАДКИ</div>
+    <div class="status-row"><div class="indicator c-green"></div> ЯСНО</div>
+    <span id="update-time">СИНХРОНИЗАЦИЯ...</span>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    const SPREADSHEET_ID = '19vZJiUgwizqrwbxrZTG5jSe1Czh7af6ApsL2VLQYSwo';
+    
+    const map = L.map('map', { 
+        zoomControl: false, 
+        attributionControl: false,
+        renderer: L.canvas()
+    }).setView([50.4501, 30.5234], 11);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    const weatherGroup = L.layerGroup().addTo(map);
+
+    function drawLaser(ctx, point, radius, color) {
+        const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
+        
+        gradient.addColorStop(0, color);
+        gradient.addColorStop(0.05, color);
+        gradient.addColorStop(0.15, hexToRgba(color, 0.6));
+        gradient.addColorStop(0.3, hexToRgba(color, 0.2));
+        gradient.addColorStop(0.6, hexToRgba(color, 0.05));
+        gradient.addColorStop(1, hexToRgba(color, 0));
+
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+    }
+
+    function hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    async function updateWeather() {
+        try {
+            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=0&v=${Date.now()}`;
+            const response = await fetch(url);
+            const csvText = await response.text();
+            
+            weatherGroup.clearLayers();
+            const rows = csvText.split('\n').slice(1);
+            
+            rows.forEach(row => {
+                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/"/g, '').trim());
+                if (cols.length >= 5) {
+                    const status = cols[2]?.toLowerCase();
+                    const lat = parseFloat(cols[3].replace(',', '.'));
+                    const lng = parseFloat(cols[4].replace(',', '.'));
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const laserColor = (status === 'red' || status === 'осадки') ? '#ff0000' : '#00ff00';
+                        
+                        const circle = L.circle([lat, lng], {
+                            radius: 500,
+                            stroke: false,
+                            fill: false,
+                            interactive: false
+                        }).addTo(weatherGroup);
+
+                        circle._updatePath = function() {
+                            const renderer = this._renderer;
+                            const ctx = renderer._ctx;
+                            const p = this._point;
+                            const r = this._radius;
+
+                            if (!p || !r) return;
+                            drawLaser(ctx, p, r, laserColor);
+                        };
+                    }
+                }
+            });
+            document.getElementById('update-time').innerText = "UPD: " + new Date().toLocaleTimeString();
+        } catch (e) {
+            console.error(e);
+            document.getElementById('update-time').innerText = "DATA ERROR";
+        }
+    }
+
+    updateWeather();
+    setInterval(updateWeather, 30000);
+
+    // Принудительное обновление размера карты при изменении ориентации экрана
+    window.addEventListener('resize', () => map.invalidateSize());
+</script>
+
+</body>
+</html>
+
