@@ -4,63 +4,127 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Киев Погода LIVE</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html, body { 
-            width: 100vw; height: 100dvh; 
-            background-color: #000; 
-            overflow: hidden; 
-            position: fixed; /* Предотвращает "дребезг" экрана при свайпах */
-        }
-        #map { width: 100%; height: 100%; z-index: 1; background: #000; }
         
-        /* ЧБ Стиль карты */
-        .leaflet-tile-pane { filter: grayscale(1) contrast(1.2) brightness(0.8); }
+        html, body { 
+            width: 100%; 
+            height: 100%; 
+            background-color: #f2f2f2;
+        }
 
-        /* Верхний индикатор */
+        #map { 
+            width: 100%; 
+            height: 100vh; 
+            z-index: 1; 
+        }
+        
+        /* Твой классический ЧБ стиль */
+        .leaflet-tile-pane { filter: grayscale(1) contrast(1.1); }
+
+        /* Панель индикации - легкая и светлая */
         .weather-panel {
-            position: fixed; top: env(safe-area-inset-top, 20px); left: 15px; z-index: 1000;
-            background: rgba(255, 255, 255, 0.95); padding: 8px 12px; border-radius: 10px;
-            border: 1px solid #000; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            pointer-events: none; backdrop-filter: blur(5px);
+            position: fixed; 
+            top: env(safe-area-inset-top, 20px); 
+            left: 15px; 
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9); 
+            padding: 10px 14px; 
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.1); 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            pointer-events: none; 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
-        .status-row { display: flex; align-items: center; margin-bottom: 2px; font-weight: 900; font-size: 10px; text-transform: uppercase; color: #000; }
-        .indicator { width: 10px; height: 10px; margin-right: 6px; border: 1px solid #000; }
-        .c-red { background: #ff0000; box-shadow: 0 0 5px #ff0000; } 
-        .c-green { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
-        #update-time { font-size: 8px; color: #444; font-family: monospace; }
 
-        /* Кастомный Popup */
+        .status-row { 
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 4px; 
+            font-weight: 800; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            color: #000; 
+        }
+
+        .indicator { 
+            width: 12px; 
+            height: 12px; 
+            margin-right: 8px; 
+            border-radius: 2px;
+            border: 1px solid rgba(0,0,0,0.2); 
+        }
+
+        .c-red { background: #ff0000; } 
+        .c-green { background: #00ff00; }
+        
+        #update-time { 
+            font-size: 9px; 
+            color: #666; 
+            font-family: monospace; 
+            font-weight: bold;
+        }
+
+        /* Окно сообщений - теперь светлое */
         .custom-popup .leaflet-popup-content-wrapper { 
-            background: #111; color: #fff; border-radius: 12px; border: 1px solid #333; padding: 0;
+            background: #ffffff; 
+            color: #333; 
+            border-radius: 12px; 
+            padding: 0; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
         }
-        .custom-popup .leaflet-popup-content { margin: 12px; width: 260px !important; }
-        .custom-popup .leaflet-popup-tip { background: #111; }
-        .custom-popup .leaflet-popup-close-button { color: #fff !important; font-size: 24px !important; top: 5px !important; right: 5px !important; }
 
-        /* Список сообщений */
+        .custom-popup .leaflet-popup-content { 
+            margin: 15px; 
+            width: 260px !important; 
+        }
+
+        .custom-popup .leaflet-popup-tip { background: #ffffff; }
+        .custom-popup .leaflet-popup-close-button { 
+            color: #999 !important; 
+            font-size: 22px !important; 
+        }
+
         .weather-popup-container { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            font-size: 13px; max-height: 240px; overflow-y: auto; 
-            -webkit-overflow-scrolling: touch; padding-right: 4px;
+            font-family: -apple-system, sans-serif;
+            font-size: 13px; 
+            max-height: 250px; 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch; 
         }
 
-        .popup-item { border-bottom: 1px solid #222; padding: 8px 0; }
+        .popup-item { 
+            border-bottom: 1px solid #eee; 
+            padding: 10px 0; 
+        }
+        
         .popup-item:last-child { border-bottom: none; }
-        .popup-time { color: #00ff00; font-weight: 600; font-size: 11px; font-family: monospace; display: block; }
-        .popup-msg { color: #eee; line-height: 1.4; display: block; margin-top: 2px; }
+        
+        .popup-time { 
+            color: #008800; 
+            font-weight: 700; 
+            font-size: 11px; 
+            display: block; 
+            margin-bottom: 2px;
+        }
 
-        /* Скрываем лишнее */
+        .popup-msg { 
+            color: #333; 
+            line-height: 1.4; 
+        }
+
         .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
+
 <div class="weather-panel">
     <div class="status-row"><div class="indicator c-red"></div> ОСАДКИ</div>
     <div class="status-row"><div class="indicator c-green"></div> ЯСНО</div>
@@ -74,14 +138,12 @@
     let rawData = [];
     let isTabActive = true;
 
-    // Следим за активностью вкладки для экономии батареи
     document.addEventListener('visibilitychange', () => { isTabActive = !document.hidden; });
 
     const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false, 
-        renderer: L.canvas(),
-        bounceAtZoomLimits: true 
+        renderer: L.canvas()
     }).setView([50.4501, 30.5234], 11);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
@@ -91,8 +153,8 @@
         const gradient = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, radius);
         gradient.addColorStop(0, color);
         gradient.addColorStop(0.1, color);
-        gradient.addColorStop(0.2, hexToRgba(color, 0.3));
-        gradient.addColorStop(0.6, hexToRgba(color, 0.05));
+        gradient.addColorStop(0.2, hexToRgba(color, 0.4));
+        gradient.addColorStop(0.6, hexToRgba(color, 0.1));
         gradient.addColorStop(1, 'transparent');
         ctx.beginPath(); ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
         ctx.fillStyle = gradient; ctx.fill();
@@ -104,7 +166,7 @@
     }
 
     async function updateWeather() {
-        if (!isTabActive) return; // Пропуск обновления, если вкладка свернута
+        if (!isTabActive) return;
 
         try {
             const response = await fetch(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=0&v=${Date.now()}`);
@@ -115,7 +177,6 @@
             rawData = []; 
 
             rows.forEach(row => {
-                // Корректная обработка CSV с запятыми внутри кавычек
                 const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/"/g, '').trim());
                 if (cols.length >= 5 && cols[3] && cols[4]) {
                     const lat = parseFloat(cols[3]), lng = parseFloat(cols[4]);
@@ -123,9 +184,8 @@
                         const point = { t: cols[0], m: cols[1], s: cols[2], lat, lng };
                         rawData.push(point);
 
-                        const color = point.s?.toLowerCase() === 'red' ? '#ff0000' : '#00ff00';
+                        const color = point.s?.toLowerCase() === 'red' ? '#ff0000' : '#00cc00';
                         
-                        // Создаем невидимый интерактивный круг
                         const circle = L.circle([lat, lng], {
                             radius: 500, stroke: false, fillOpacity: 0, interactive: true
                         }).addTo(weatherLayer);
@@ -146,7 +206,7 @@
 
     function showMessages(clickLatLng) {
         const nearby = rawData
-            .filter(p => map.distance(clickLatLng, [p.lat, p.lng]) <= 550) // Небольшой запас для удобства клика
+            .filter(p => map.distance(clickLatLng, [p.lat, p.lng]) <= 550)
             .sort((a, b) => a.t.localeCompare(b.t));
 
         if (nearby.length === 0) return;
@@ -165,7 +225,6 @@
             .setContent(content)
             .openOn(map);
 
-        // Плавный скролл вниз через микро-задержку
         requestAnimationFrame(() => {
             const container = document.querySelector('.weather-popup-container');
             if (container) container.scrollTop = container.scrollHeight;
@@ -173,7 +232,7 @@
     }
 
     updateWeather();
-    setInterval(updateWeather, 30000); // 30 секунд - оптимально для мобильных данных
+    setInterval(updateWeather, 30000);
 </script>
 
 </body>
