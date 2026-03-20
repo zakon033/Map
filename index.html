@@ -9,45 +9,43 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Полный сброс для исключения любых полос */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
+        /* Убираем прокрутку и фиксируем фон */
         html, body {
             width: 100%;
             height: 100%;
-            /* svh - самая стабильная единица для исключения серых зон в браузере */
-            height: 100svh; 
-            background-color: #f4f1ed; /* Цвет подложки Toner Lite для бесшовности */
             overflow: hidden;
+            background: #f4f1ed;
             position: fixed;
         }
 
+        /* КАРТА БОЛЬШЕ ЭКРАНА: 120% высоты с вылетом вверх на 10% */
         #map {
             width: 100%;
-            height: 100%;
-            height: 100svh;
+            height: 120vh; 
             position: absolute;
-            top: 0;
+            top: -10vh; 
             left: 0;
             z-index: 1;
         }
 
-        /* Стиль Toner Lite */
+        /* Стиль карты */
         .leaflet-tile-pane {
             filter: grayscale(1) contrast(1.2) brightness(1.05);
         }
 
-        /* Панель индикаторов (стеклянная) */
+        /* Панель индикаторов */
         .weather-panel {
             position: absolute;
-            top: env(safe-area-inset-top, 20px);
+            top: env(safe-area-inset-top, 30px);
             left: 15px;
             z-index: 1000;
             background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             padding: 10px 15px;
-            border-radius: 10px;
+            border-radius: 12px;
             border: 0.5px solid rgba(0, 0, 0, 0.1);
             pointer-events: none;
         }
@@ -72,7 +70,6 @@
             font-family: monospace;
         }
 
-        /* Полное скрытие всех системных подписей карты */
         .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
     </style>
 </head>
@@ -130,9 +127,9 @@
                     }
                 }
             });
-            document.getElementById('update-time').innerText = "ОБНОВЛЕНО: " + new Date().toLocaleTimeString();
+            document.getElementById('update-time').innerText = "UPD: " + new Date().toLocaleTimeString();
         } catch (e) {
-            document.getElementById('update-time').innerText = "ОШИБКА ДАННЫХ";
+            document.getElementById('update-time').innerText = "ERROR";
         }
     }
 
