@@ -1,1 +1,139 @@
-222
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Киев Погода LIVE</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { 
+            margin: 0; padding: 0; height: 100%; 
+            font-family: -apple-system, sans-serif; 
+            background: #fff; overflow: hidden; 
+        }
+        #map { height: 100vh; width: 100%; background: #fff; }
+
+        /* Эмуляция Toner Lite через CSS фильтры */
+        .leaflet-tile-pane {
+            filter: grayscale(1) contrast(1.3) brightness(1.05);
+        }
+
+        /* Панель индикаторов (мобильный стиль) */
+        .weather-panel {
+            position: absolute;
+            top: env(safe-area-inset-top, 20px);
+            left: 15px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border: 2px solid #000;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.1);
+            pointer-events: none;
+        }
+
+        .status-row { 
+            display: flex; align-items: center; 
+            margin-bottom: 4px; font-weight: 900; 
+            font-size: 12px; color: #000;
+            text-transform: uppercase;
+        }
+        
+        .indicator { 
+            width: 14px; height: 14px; margin-right: 8px; 
+            border: 1.5px solid #000; 
+        }
+        
+        /* Цвета индикаторов в меню */
+        .c-red { background: rgba(255, 0, 0, 0.5); }
+        .c-green { background: rgba(0, 255, 0, 0.5); }
+        
+        #update-time { 
+            font-size: 9px; color: #000; display: block; 
+            font-family: monospace; font-weight: bold; 
+        }
+
+        /* Метки не должны быть черно-белыми */
+        .leaflet-marker-pane { filter: none !important; }
+        /* Скрываем кнопки зума для мобильного интерфейса */
+        .leaflet-control-zoom { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="weather-panel">
+    <div class="status-row"><div class="indicator c-red"></div> ОСАДКИ</div>
+    <div class="status-row"><div class="indicator c-green"></div> ЯСНО</div>
+    <span id="update-time">ЗАГРУЗКА...</span>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // ID твоей таблицы
+    const SPREADSHEET_ID = '19vZJiUgwizqrwbxrZTG5jSe1Czh7af6ApsL2VLQYSwo';
+    
+    // Инициализация карты на Киев
+    const map = L.map('map', { 
+        zoomControl: false, 
+        attributionControl: false,
+        tap: true 
+    }).setView([50.4501, 30.5234], 10);
+
+    // Слой карты (OSM)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    const weatherGroup = L.layerGroup().addTo(map);
+
+    async function updateWeather() {
+        try {
+            // Формируем ссылку на CSV экспорт таблицы с защитой от кэширования
+            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=0&v=${Date.now()}`;
+            const response = await fetch(url);
+            const csvText = await response.text();
+            
+            weatherGroup.clearLayers();
+            const rows = csvText.split('\n').slice(1); // Пропускаем шапку
+            
+            rows.forEach(row => {
+                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/"/g, '').trim());
+                
+                // Проверяем данные: статус (индекс 2), широта (3), долгота (4)
+                if (cols.length >= 5) {
+                    const status = cols[2] ? cols[2].toLowerCase() : '';
+                    const lat = parseFloat(cols[3]);
+                    const lng = parseFloat(cols[4]);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const baseColor = status === 'red' ? '#ff0000' : '#00ff00';
+                        
+                        // Создаем полупрозрачный круг
+                        L.circleMarker([lat, lng], {
+                            radius: 15,
+                            fillColor: baseColor,
+                            fillOpacity: 0.5, // 50% прозрачности закраски
+                            color: baseColor,  // Цвет контура
+                            weight: 2,         // Толщина контура
+                            opacity: 0.8       // Прозрачность контура
+                        }).addTo(weatherGroup);
+                    }
+                }
+            });
+            document.getElementById('update-time').innerText = "ОБНОВЛЕНО: " + new Date().toLocaleTimeString();
+        } catch (e) {
+            document.getElementById('update-time').innerText = "ОШИБКА ДАННЫХ";
+        }
+    }
+
+    // Запуск при загрузке и каждые 30 секунд
+    updateWeather();
+    setInterval(updateWeather, 30000);
+</script>
+
+</body>
+</html>
+
