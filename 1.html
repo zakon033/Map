@@ -9,32 +9,41 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        /* Убираем все отступы и полоски */
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+        }
         
         html, body { 
             width: 100%; 
             height: 100%; 
-            background-color: #f2f2f2;
+            /* Цвет фона совпадает с цветом карты, чтобы скрыть полосы прокрутки/границы */
+            background-color: #aad3df; 
+            overflow: hidden;
+            position: fixed;
         }
 
         #map { 
             width: 100%; 
-            height: 100vh; 
+            height: 100%; 
             z-index: 1; 
         }
         
-        /* Твой классический ЧБ стиль */
+        /* ЧБ Стиль карты */
         .leaflet-tile-pane { filter: grayscale(1) contrast(1.1); }
 
-        /* Панель индикации - легкая и светлая */
+        /* Панель индикации */
         .weather-panel {
             position: fixed; 
-            top: env(safe-area-inset-top, 20px); 
-            left: 15px; 
+            top: env(safe-area-inset-top, 10px); 
+            left: 10px; 
             z-index: 1000;
             background: rgba(255, 255, 255, 0.9); 
-            padding: 10px 14px; 
-            border-radius: 12px;
+            padding: 8px 12px; 
+            border-radius: 10px;
             border: 1px solid rgba(0,0,0,0.1); 
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             pointer-events: none; 
@@ -45,62 +54,61 @@
         .status-row { 
             display: flex; 
             align-items: center; 
-            margin-bottom: 4px; 
+            margin-bottom: 2px; 
             font-weight: 800; 
-            font-size: 11px; 
+            font-size: 10px; 
             text-transform: uppercase; 
             color: #000; 
         }
 
         .indicator { 
-            width: 12px; 
-            height: 12px; 
-            margin-right: 8px; 
+            width: 10px; 
+            height: 10px; 
+            margin-right: 6px; 
             border-radius: 2px;
-            border: 1px solid rgba(0,0,0,0.2); 
+            border: 1px solid rgba(0,0,0,0.1); 
         }
 
         .c-red { background: #ff0000; } 
         .c-green { background: #00ff00; }
         
         #update-time { 
-            font-size: 9px; 
+            font-size: 8px; 
             color: #666; 
             font-family: monospace; 
-            font-weight: bold;
         }
 
-        /* Окно сообщений - теперь светлое */
+        /* Окно сообщений */
         .custom-popup .leaflet-popup-content-wrapper { 
             background: #ffffff; 
             color: #333; 
             border-radius: 12px; 
             padding: 0; 
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
         }
 
         .custom-popup .leaflet-popup-content { 
-            margin: 15px; 
+            margin: 12px; 
             width: 260px !important; 
         }
 
-        .custom-popup .leaflet-popup-tip { background: #ffffff; }
         .custom-popup .leaflet-popup-close-button { 
-            color: #999 !important; 
-            font-size: 22px !important; 
+            color: #333 !important; 
+            font-size: 20px !important; 
+            padding: 10px 10px 0 0 !important;
         }
 
         .weather-popup-container { 
             font-family: -apple-system, sans-serif;
             font-size: 13px; 
-            max-height: 250px; 
+            max-height: 220px; 
             overflow-y: auto; 
             -webkit-overflow-scrolling: touch; 
         }
 
         .popup-item { 
             border-bottom: 1px solid #eee; 
-            padding: 10px 0; 
+            padding: 8px 0; 
         }
         
         .popup-item:last-child { border-bottom: none; }
@@ -108,14 +116,15 @@
         .popup-time { 
             color: #008800; 
             font-weight: 700; 
-            font-size: 11px; 
+            font-size: 10px; 
             display: block; 
-            margin-bottom: 2px;
         }
 
         .popup-msg { 
-            color: #333; 
+            color: #222; 
             line-height: 1.4; 
+            margin-top: 2px;
+            word-wrap: break-word;
         }
 
         .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
@@ -128,7 +137,7 @@
 <div class="weather-panel">
     <div class="status-row"><div class="indicator c-red"></div> ОСАДКИ</div>
     <div class="status-row"><div class="indicator c-green"></div> ЯСНО</div>
-    <span id="update-time">ЗАГРУЗКА...</span>
+    <span id="update-time">ОБНОВЛЕНИЕ...</span>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -146,6 +155,7 @@
         renderer: L.canvas()
     }).setView([50.4501, 30.5234], 11);
 
+    // Цвет фона Leaflet контейнера делаем таким же как у тайлов
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     const weatherLayer = L.layerGroup().addTo(map);
 
@@ -178,10 +188,18 @@
 
             rows.forEach(row => {
                 const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/"/g, '').trim());
+                
+                // ВАЖНО: Проверь индексы колонок в твоей таблице!
+                // Обычно: 0 - Время, 1 - Сообщение, 2 - Цвет, 3 - Лат, 4 - Лнг
                 if (cols.length >= 5 && cols[3] && cols[4]) {
                     const lat = parseFloat(cols[3]), lng = parseFloat(cols[4]);
                     if (!isNaN(lat) && !isNaN(lng)) {
-                        const point = { t: cols[0], m: cols[1], s: cols[2], lat, lng };
+                        const point = { 
+                            t: cols[0], // Время
+                            m: cols[1], // САМО СООБЩЕНИЕ
+                            s: cols[2], // Статус (red/green)
+                            lat, lng 
+                        };
                         rawData.push(point);
 
                         const color = point.s?.toLowerCase() === 'red' ? '#ff0000' : '#00cc00';
@@ -200,7 +218,7 @@
             });
             document.getElementById('update-time').innerText = "UPD: " + new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
         } catch (e) { 
-            document.getElementById('update-time').innerText = "ОШИБКА СЕТИ";
+            console.error(e);
         }
     }
 
@@ -220,7 +238,7 @@
         });
         content += '</div>';
 
-        L.popup({ maxWidth: 280, className: 'custom-popup', autoPanPadding: [80, 80] })
+        L.popup({ maxWidth: 280, className: 'custom-popup', autoPanPadding: [100, 100] })
             .setLatLng(clickLatLng)
             .setContent(content)
             .openOn(map);
