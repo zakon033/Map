@@ -9,7 +9,9 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Убираем ограничения высоты для всей страницы */
+        /* Полный сброс без лишних украшательств */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         html, body {
             margin: 0;
             padding: 0;
@@ -22,66 +24,62 @@
             left: 0;
         }
 
-        /* КАРТА: Огромный слой */
+        /* КАРТА: Огромный слой 300% высоты для борьбы с полосами */
         #map {
             position: absolute;
-            width: 110vw; 
+            width: 100vw; 
             height: 300vh; 
             top: -100vh;   
-            left: -5vw;
+            left: 0;
             z-index: 1;
-            transform: translate3d(0,0,0);
-            -webkit-transform: translate3d(0,0,0);
         }
 
-        /* Стиль Toner Lite */
+        /* Простой ЧБ стиль */
         .leaflet-tile-pane {
-            filter: grayscale(1) contrast(1.1) brightness(1.03);
+            filter: grayscale(1) contrast(1.1);
         }
 
-        /* УЛУЧШЕННАЯ СТЕКЛЯННАЯ ПЛАШКА */
+        /* МАКСИМАЛЬНО ПРОСТАЯ ПЛАШКА (БЕЗ РАЗМЫТИЯ) */
         .weather-panel {
             position: fixed; 
-            top: env(safe-area-inset-top, 44px);
+            top: env(safe-area-inset-top, 40px);
             left: 20px;
             z-index: 9999;
-            /* Увеличил плотность белого для стабильности цвета */
-            background: rgba(255, 255, 255, 0.82); 
-            /* Системное размытие iOS */
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            padding: 12px 16px;
-            border-radius: 14px;
-            /* Тонкая светлая граница для объема */
-            border: 0.5px solid rgba(255, 255, 255, 0.4);
-            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+            background: #ffffff; /* Чистый белый без прозрачности */
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1.5px solid #000000; /* Четкая черная рамка */
             pointer-events: none;
-            /* Оптимизация отрисовки */
-            will-change: backdrop-filter;
         }
 
         .status-row { 
-            display: flex; align-items: center; 
-            margin-bottom: 5px; font-weight: 800; 
-            font-size: 11px; color: #000;
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 4px; 
+            font-weight: 900; 
+            font-size: 12px; 
+            color: #000;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
         
         .indicator { 
-            width: 10px; height: 10px; margin-right: 10px; 
-            border-radius: 50%; /* Сделал круглыми для эстетики */
+            width: 12px; 
+            height: 12px; 
+            margin-right: 8px; 
+            border: 1px solid #000; /* Контур для индикаторов */
         }
         
-        .c-red { background: #ff3b30; box-shadow: 0 0 8px rgba(255, 59, 48, 0.4); } 
-        .c-green { background: #34c759; box-shadow: 0 0 8px rgba(52, 199, 89, 0.4); }
+        .c-red { background: #ff0000; } 
+        .c-green { background: #00ff00; }
         
         #update-time { 
-            font-size: 8px; color: rgba(0,0,0,0.4); 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
-            font-weight: 600;
+            font-size: 9px; 
+            color: #666; 
+            font-family: monospace;
+            font-weight: bold;
         }
 
+        /* Убираем мусор */
         .leaflet-control-zoom, .leaflet-control-attribution, .leaflet-top.leaflet-left { 
             display: none !important; 
         }
@@ -105,9 +103,8 @@
     const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false,
-        zoomAnimation: true,
-        fadeAnimation: true,
-        markerZoomAnimation: true,
+        zoomAnimation: false, // Отключил анимацию для простоты
+        fadeAnimation: false,
         tap: true 
     }).setView([50.4501, 30.5234], 11);
 
@@ -132,21 +129,21 @@
                     const lng = parseFloat(cols[4]);
 
                     if (!isNaN(lat) && !isNaN(lng)) {
-                        const color = status === 'red' ? '#ff3b30' : '#34c759';
+                        const color = status === 'red' ? '#ff0000' : '#00ff00';
                         L.circleMarker([lat, lng], {
-                            radius: 20, 
+                            radius: 18, 
                             fillColor: color,
-                            fillOpacity: 0.45,
-                            color: color,
+                            fillOpacity: 0.6,
+                            color: '#000',
                             weight: 1,
-                            opacity: 0.6
+                            opacity: 1
                         }).addTo(weatherGroup);
                     }
                 }
             });
             document.getElementById('update-time').innerText = "UPD: " + new Date().toLocaleTimeString();
         } catch (e) {
-            document.getElementById('update-time').innerText = "ERROR";
+            document.getElementById('update-time').innerText = "DATA ERROR";
         }
     }
 
