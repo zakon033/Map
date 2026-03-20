@@ -9,73 +9,74 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* СБРОС СТИЛЕЙ И БЛОКИРОВКА СИСТЕМНЫХ ОТСТУПОВ */
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
-        /* КРИТИЧЕСКИЙ БЛОК: Метод 300vh для борьбы с барами браузера */
+        /* Убираем прокрутку и фиксируем фон */
         html, body {
-            margin: 0; padding: 0; 
-            width: 100vw; 
-            height: 300vh; 
-            background-color: #f2f2f2; 
+            width: 100%;
+            height: 100%;
             overflow: hidden;
-            position: absolute; 
-            top: 0; 
+            background: #f4f1ed;
+            position: fixed;
+        }
+
+        /* КАРТА БОЛЬШЕ ЭКРАНА: 120% высоты с вылетом вверх на 10% */
+        #map {
+            width: 100%;
+            height: 120vh; 
+            position: absolute;
+            top: -10vh; 
             left: 0;
-            overscroll-behavior: none;
+            z-index: 1;
         }
 
-        /* КАРТА: Центрирование в безопасной зоне */
-        #map { 
-            position: absolute; 
-            width: 100vw; 
-            height: 300vh; 
-            top: -100vh; 
-            left: 0; 
-            z-index: 1; 
-            background: #fff;
+        /* Стиль карты */
+        .leaflet-tile-pane {
+            filter: grayscale(1) contrast(1.2) brightness(1.05);
         }
 
-        /* СТИЛИЗАЦИЯ КАРТЫ (ЧЕРНО-БЕЛЫЙ) */
-        .leaflet-tile-pane { filter: grayscale(1) contrast(1.1); }
-
-        /* ИНФОРМАЦИОННАЯ ПАНЕЛЬ */
+        /* Панель индикаторов */
         .weather-panel {
-            position: fixed; 
-            top: env(safe-area-inset-top, 40px); 
-            left: 20px; 
-            z-index: 9999;
-            background: #fff; 
-            padding: 10px 14px; 
-            border-radius: 8px; 
-            border: 2.5px solid #000; 
+            position: absolute;
+            top: env(safe-area-inset-top, 30px);
+            left: 15px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 10px 15px;
+            border-radius: 12px;
+            border: 0.5px solid rgba(0, 0, 0, 0.1);
             pointer-events: none;
         }
-        .status-row { display: flex; align-items: center; margin-bottom: 4px; font-weight: 900; font-size: 12px; text-transform: uppercase; }
-        .indicator { width: 12px; height: 12px; margin-right: 8px; border: 1px solid #000; }
-        .c-red { background: #ff4d00; } 
-        .c-green { background: #00ff41; }
-        #update-time { font-size: 10px; color: #666; font-family: monospace; font-weight: bold; }
 
-        /* ПОПАП СООБЩЕНИЙ */
-        .leaflet-popup-content-wrapper {
-            background: #fff; color: #000; border-radius: 4px; border: 2px solid #000;
-            max-height: 250px; overflow-y: auto; box-shadow: none;
+        .status-row { 
+            display: flex; align-items: center; 
+            margin-bottom: 4px; font-weight: 700; 
+            font-size: 11px; color: #000;
+            text-transform: uppercase;
         }
-        .leaflet-popup-content { margin: 12px; width: 240px !important; }
-        .msg-item { padding: 8px 0; border-bottom: 1px solid #eee; }
-        .msg-item:last-child { border-bottom: none; }
-        .msg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-        .msg-time { font-size: 10px; color: #888; font-weight: bold; font-family: monospace; }
-        .msg-status-dot { width: 10px; height: 10px; border: 1.5px solid #000; }
-        .msg-body { font-size: 13px; font-weight: 700; line-height: 1.3; color: #000; }
+        
+        .indicator { 
+            width: 12px; height: 12px; margin-right: 8px; 
+            border-radius: 3px;
+        }
+        
+        .c-red { background: rgba(255, 59, 48, 0.6); } 
+        .c-green { background: rgba(52, 199, 89, 0.6); }
+        
+        #update-time { 
+            font-size: 8px; color: rgba(0,0,0,0.5); 
+            font-family: monospace;
+        }
 
-        /* СКРЫТИЕ КОНТРОЛЛОВ */
-        .leaflet-control-zoom, .leaflet-control-attribution, .leaflet-top.leaflet-left { display: none !important; }
+        .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
     </style>
 </head>
 <body>
+
 <div id="map"></div>
+
 <div class="weather-panel">
     <div class="status-row"><div class="indicator c-red"></div> ОСАДКИ</div>
     <div class="status-row"><div class="indicator c-green"></div> ЯСНО</div>
@@ -83,92 +84,58 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
     const SPREADSHEET_ID = '19vZJiUgwizqrwbxrZTG5jSe1Czh7af6ApsL2VLQYSwo';
-    let allWeatherPoints = [];
     
-    // Инициализация карты с использованием Canvas рендерера для лазеров
     const map = L.map('map', { 
         zoomControl: false, 
-        attributionControl: false, 
-        renderer: L.canvas(),
-        tap: false 
+        attributionControl: false,
+        tap: true 
     }).setView([50.4501, 30.5234], 11);
-    
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
     const weatherGroup = L.layerGroup().addTo(map);
 
-    // Функция отрисовки "лазерной" точки
-    function drawLaser(ctx, p, r, color) {
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
-        g.addColorStop(0, color); 
-        g.addColorStop(0.05, color);
-        g.addColorStop(0.15, color.replace('1)', '0.6)')); 
-        g.addColorStop(0.3, color.replace('1)', '0.2)'));
-        g.addColorStop(0.6, color.replace('1)', '0.05)')); 
-        g.addColorStop(1, color.replace('1)', '0)'));
-        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2); ctx.fillStyle = g; ctx.fill();
-    }
-
-    // Загрузка данных
-    async function update() {
+    async function updateWeather() {
         try {
-            const res = await fetch(`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=0&v=${Date.now()}`, {cache:"no-store"});
-            const csv = await res.text();
-            weatherGroup.clearLayers(); 
-            allWeatherPoints = [];
-            const rows = csv.split('\n').slice(1);
+            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=0&v=${Date.now()}`;
+            const response = await fetch(url);
+            const csvText = await response.text();
+            
+            weatherGroup.clearLayers();
+            const rows = csvText.split('\n').slice(1);
             
             rows.forEach(row => {
-                const c = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s=>s.replace(/"/g,'').trim());
-                if (c.length >= 6) {
-                    const p = { 
-                        time: c[0], 
-                        status: c[2].toLowerCase(), 
-                        lat: parseFloat(c[3]), 
-                        lng: parseFloat(c[4]), 
-                        msg: c[5] || '...' 
-                    };
-                    if (!isNaN(p.lat) && !isNaN(p.lng)) {
-                        allWeatherPoints.push(p);
-                        const col = p.status.includes('red') ? 'rgba(255, 77, 0, 1)' : 'rgba(0, 255, 65, 1)';
-                        const circle = L.circle([p.lat, p.lng], { radius: 550, stroke: false, fill: false, interactive: false }).addTo(weatherGroup);
-                        circle._updatePath = function() { 
-                            if(this._point && this._radius) drawLaser(this._renderer._ctx, this._point, this._radius, col); 
-                        };
+                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/"/g, '').trim());
+                if (cols.length >= 5) {
+                    const status = cols[2]?.toLowerCase();
+                    const lat = parseFloat(cols[3]);
+                    const lng = parseFloat(cols[4]);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const color = status === 'red' ? '#ff3b30' : '#34c759';
+                        L.circleMarker([lat, lng], {
+                            radius: 18,
+                            fillColor: color,
+                            fillOpacity: 0.45,
+                            color: color,
+                            weight: 1.5,
+                            opacity: 0.6
+                        }).addTo(weatherGroup);
                     }
                 }
             });
             document.getElementById('update-time').innerText = "UPD: " + new Date().toLocaleTimeString();
-        } catch(e) { document.getElementById('update-time').innerText = "ОШИБКА"; }
+        } catch (e) {
+            document.getElementById('update-time').innerText = "ERROR";
+        }
     }
 
-    // Логика группировки клика (500м)
-    map.on('click', e => {
-        const nearby = allWeatherPoints.filter(p => map.distance(e.latlng, L.latLng(p.lat, p.lng)) <= 500).reverse();
-        if (nearby.length > 0) {
-            let html = '<div class="popup-wrapper">';
-            nearby.forEach(p => {
-                const clr = p.status.includes('red') ? '#ff4d00' : '#00ff41';
-                const displayTime = p.time.includes(' ') ? p.time.split(' ')[1] : p.time;
-                html += `
-                    <div class="msg-item">
-                        <div class="msg-header">
-                            <span class="msg-time">${displayTime}</span>
-                            <div class="msg-status-dot" style="background:${clr}"></div>
-                        </div>
-                        <div class="msg-body">${p.msg}</div>
-                    </div>`;
-            });
-            html += '</div>';
-            L.popup({ closeButton: false, offset: L.point(0, -5), maxWidth: 260 }).setLatLng(e.latlng).setContent(html).openOn(map);
-        }
-    });
-
-    update(); 
-    setInterval(update, 30000);
-    document.addEventListener("visibilitychange", () => { if(document.visibilityState==='visible') update(); });
+    updateWeather();
+    setInterval(updateWeather, 30000);
 </script>
+
 </body>
 </html>
-
