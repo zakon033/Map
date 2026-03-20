@@ -2,7 +2,6 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <!-- viewport-fit=cover заставляет контент затекать под челку и нижнюю полосу -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -10,36 +9,37 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Максимально жесткий сброс всех отступов */
+        /* Полный сброс для исключения любых полос */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
-        body, html { 
+        html, body {
             width: 100%;
             height: 100%;
-            background: #ffffff; /* Белый фон, чтобы сливался с картой */
+            /* svh - самая стабильная единица для исключения серых зон в браузере */
+            height: 100svh; 
+            background-color: #f4f1ed; /* Цвет подложки Toner Lite для бесшовности */
             overflow: hidden;
-            position: fixed; /* Блокирует прокрутку самого окна браузера */
+            position: fixed;
         }
 
-        /* Карта принудительно на весь экран */
-        #map { 
-            position: fixed;
+        #map {
+            width: 100%;
+            height: 100%;
+            height: 100svh;
+            position: absolute;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
             z-index: 1;
         }
 
-        /* Стиль карты (Серый/Toner) */
+        /* Стиль Toner Lite */
         .leaflet-tile-pane {
             filter: grayscale(1) contrast(1.2) brightness(1.05);
         }
 
-        /* Панель в стиле iOS (стеклянная) */
+        /* Панель индикаторов (стеклянная) */
         .weather-panel {
             position: absolute;
-            /* Учитываем верхнюю "челку" айфона */
             top: env(safe-area-inset-top, 20px);
             left: 15px;
             z-index: 1000;
@@ -64,15 +64,15 @@
             border-radius: 3px;
         }
         
-        .c-red { background: rgba(255, 59, 48, 0.5); } 
-        .c-green { background: rgba(52, 199, 89, 0.5); }
+        .c-red { background: rgba(255, 59, 48, 0.6); } 
+        .c-green { background: rgba(52, 199, 89, 0.6); }
         
         #update-time { 
             font-size: 8px; color: rgba(0,0,0,0.5); 
             font-family: monospace;
         }
 
-        /* Прячем логотипы и кнопки зума */
+        /* Полное скрытие всех системных подписей карты */
         .leaflet-control-zoom, .leaflet-control-attribution { display: none !important; }
     </style>
 </head>
@@ -91,7 +91,6 @@
 <script>
     const SPREADSHEET_ID = '19vZJiUgwizqrwbxrZTG5jSe1Czh7af6ApsL2VLQYSwo';
     
-    // Центрируем на Киев
     const map = L.map('map', { 
         zoomControl: false, 
         attributionControl: false,
@@ -123,7 +122,7 @@
                         L.circleMarker([lat, lng], {
                             radius: 18,
                             fillColor: color,
-                            fillOpacity: 0.4,
+                            fillOpacity: 0.45,
                             color: color,
                             weight: 1.5,
                             opacity: 0.6
